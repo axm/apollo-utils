@@ -21,7 +21,7 @@ type KafkaProducerConfig struct {
 type RedisConfig struct {
 	Address  string
 	Password string
-	DB       uint8
+	DB       int
 }
 
 type DefaultApp struct {
