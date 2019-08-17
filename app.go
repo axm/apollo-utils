@@ -7,13 +7,13 @@ const (
 )
 
 type KafkaConsumerConfig struct {
-	bootstrapServers string
-	groupId          string
-	autoOffsetReset  string
+	BootstrapServers string
+	GroupId          string
+	AutoOffsetReset  string
 }
 
 type KafkaProducerConfig struct {
-	bootstrapServers string
+	BootstrapServers string
 }
 
 type RedisConfig struct {
