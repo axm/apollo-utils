@@ -4,6 +4,8 @@ import "github.com/gorilla/mux"
 
 const (
 	KAFKA_BOOTSTRAP_SERVERS = "bootstrap.servers"
+	KAFKA_GROUP_ID = "group.id"
+	KAFKA_AUTO_OFFSET_RESET = "auto.offset.reset"
 )
 
 type KafkaConsumerConfig struct {
