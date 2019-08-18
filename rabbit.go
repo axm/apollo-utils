@@ -2,9 +2,9 @@ package apollo
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 )
-
 
 type RabbitConnection struct {
 	User     string
@@ -13,8 +13,10 @@ type RabbitConnection struct {
 	Port     string
 }
 
-type RabbitQueueSettings struct {
-	Name       string
+type RabbitPublisherSettings struct {
+	Queue      string
+	Exchange   string
+	RoutingKey string
 	Durable    bool
 	AutoDelete bool
 	Exclusive  bool
@@ -32,7 +34,6 @@ type RabbitConsumerSettings struct {
 	Args      interface{}
 }
 
-
 func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/", rc.User, rc.Password, rc.Host, rc.Port))
 	if err != nil {
@@ -42,19 +43,43 @@ func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	return conn, nil
 }
 
+func PublishMessage(rc *RabbitConnection, settings *RabbitPublisherSettings, contents *[]byte) error {
+	connString := fmt.Sprintf("amqp://%s:%s@%s:%d/", rc.User, rc.Password, rc.Host, rc.Port)
+	conn, error := amqp.Dial(connString)
+	if error != nil {
+		return errors.Wrap(error, "Unable to connect to rabbit instance")
+	}
+	defer conn.Close()
 
-func DeclareQueue(ch *amqp.Channel, qs *RabbitQueueSettings) (amqp.Queue, error) {
-	queue, error := ch.QueueDeclare(
-		qs.Name,       // name
-		qs.Durable,    // durable
-		qs.AutoDelete, // delete when usused
-		qs.Exclusive,  // exclusive
-		qs.NoWait,     // no-wait
-		qs.Args,       // arguments
+	ch, error := conn.Channel()
+	if error != nil {
+		return errors.Wrap(error, "Unable to create rabbit channel")
+	}
+	defer ch.Close()
+
+	_, error = ch.QueueDeclare(
+		settings.Queue,      // name
+		settings.Durable,    // durable
+		settings.AutoDelete, // delete when usused
+		settings.Exclusive,  // exclusive
+		settings.NoWait,     // no-wait
+		settings.Args,       // arguments
 	)
 	if error != nil {
-		return queue, &Error{ message: "Error declaring queue", err: error, }
+		return errors.Wrap(error, "Error declaring queue.")
 	}
 
-	return queue, nil
+	error = ch.Publish(settings.Exchange,
+		settings.RoutingKey,
+		false,
+		false,
+		amqp.Publishing{
+			ContentType: "application/json",
+			Body:        *contents,
+		})
+	if error != nil {
+		return errors.Wrap(error, "Error publishing message.")
+	}
+
+	return nil
 }
