@@ -10,7 +10,7 @@ type RabbitConnection struct {
 	User     string
 	Password string
 	Host     string
-	Port     string
+	Port     uint16
 }
 
 type RabbitPublisherSettings struct {
