@@ -47,7 +47,7 @@ func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	return conn, nil
 }
 
-func PublishMessage(rc *RabbitConnection, settings *RabbitPublisherSettings, contents *[]byte) error {
+func (rc *RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, contents *[]byte) error {
 	connString := fmt.Sprintf("amqp://%s:%s@%s:%d/", rc.User, rc.Password, rc.Host, rc.Port)
 	conn, error := amqp.Dial(connString)
 	if error != nil {
