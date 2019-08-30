@@ -35,7 +35,7 @@ type RabbitConsumerSettings struct {
 }
 
 type RabbitPublisher interface {
-	PublishMessage(rc *RabbitConnection, settings *RabbitPublisherSettings, contents *[]byte) error
+	PublishMessage(settings *RabbitPublisherSettings, contents *[]byte) error
 }
 
 func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
