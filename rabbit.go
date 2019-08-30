@@ -34,6 +34,10 @@ type RabbitConsumerSettings struct {
 	Args      interface{}
 }
 
+type RabbitPublisher interface {
+	PublishMessage(rc *RabbitConnection, settings *RabbitPublisherSettings, contents *[]byte) error
+}
+
 func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/", rc.User, rc.Password, rc.Host, rc.Port))
 	if err != nil {
