@@ -2,7 +2,6 @@ package apollo
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"github.com/streadway/amqp"
 )
 
@@ -41,7 +40,7 @@ type RabbitPublisher interface {
 func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/", rc.User, rc.Password, rc.Host, rc.Port))
 	if err != nil {
-		return nil, &Error{message: "Error creating Rabbit connection", err: err}
+		return nil, fmt.Errorf("error creating Rabbit connection: %w", err)
 	}
 
 	return conn, nil
@@ -51,13 +50,13 @@ func (rc *RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, co
 	connString := fmt.Sprintf("amqp://%s:%s@%s:%d/", rc.User, rc.Password, rc.Host, rc.Port)
 	conn, error := amqp.Dial(connString)
 	if error != nil {
-		return errors.Wrap(error, "Unable to connect to rabbit instance")
+		return fmt.Errorf("unable to connect to rabbit instance: %w", error)
 	}
 	defer conn.Close()
 
 	ch, error := conn.Channel()
 	if error != nil {
-		return errors.Wrap(error, "Unable to create rabbit channel")
+		return fmt.Errorf("unable to create rabbit channel: %w", error)
 	}
 	defer ch.Close()
 
@@ -70,7 +69,7 @@ func (rc *RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, co
 		settings.Args,       // arguments
 	)
 	if error != nil {
-		return errors.Wrap(error, "Error declaring queue.")
+		return fmt.Errorf("error declaring queue: %w", error)
 	}
 
 	error = ch.Publish(settings.Exchange,
@@ -82,7 +81,7 @@ func (rc *RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, co
 			Body:        *contents,
 		})
 	if error != nil {
-		return errors.Wrap(error, "Error publishing message.")
+		return fmt.Errorf("error publishing message: %w", error)
 	}
 
 	return nil
