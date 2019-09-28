@@ -2,7 +2,6 @@ package apollo
 
 import (
 	"encoding/json"
-	"github.com/axm/apollo-utils"
 	"io/ioutil"
 	"os"
 	"fmt"
@@ -26,8 +25,8 @@ func ReadFileFromRelativePath(relativePath string) ([]byte, error) {
 	return contents, nil
 }
 
-func ReadDatabaseConnection(config *Config) (*apollo.DatabaseConnection, error) {
-	var dc apollo.DatabaseConnection
+func ReadDatabaseConnection(config *Config) (*DatabaseConnection, error) {
+	var dc DatabaseConnection
 	bytes, err := (*config)["Database"].MarshalJSON()
 	if err != nil {
 		return nil, fmt.Errorf("unable to read database settings section: %w", err)
@@ -40,7 +39,7 @@ func ReadDatabaseConnection(config *Config) (*apollo.DatabaseConnection, error) 
 	return &dc, nil
 }
 
-func ReadRabbitSettings(config *Config) (*apollo.RabbitConnection, *apollo.RabbitConsumerSettings, error) {
+func ReadRabbitSettings(config *Config) (*RabbitConnection, *RabbitConsumerSettings, error) {
 	buffer, err := (*config)["Rabbit"].MarshalJSON()
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to read rabbit settings section: %w", err)
@@ -50,13 +49,13 @@ func ReadRabbitSettings(config *Config) (*apollo.RabbitConnection, *apollo.Rabbi
 	err = json.Unmarshal(buffer, &rabbitMap)
 
 	buffer, err = rabbitMap["Connection"].MarshalJSON()
-	var rc apollo.RabbitConnection
+	var rc RabbitConnection
 	err = json.Unmarshal(buffer, &rc)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unable to parse rabbit connection settings: %w", err)
 	}
 
-	var cs apollo.RabbitConsumerSettings
+	var cs RabbitConsumerSettings
 	buffer, err = rabbitMap["Consumer"].MarshalJSON()
 	err = json.Unmarshal(buffer, &cs)
 	if err != nil {
