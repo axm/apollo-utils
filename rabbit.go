@@ -2,6 +2,7 @@ package apollo
 
 import (
 	"fmt"
+
 	"github.com/streadway/amqp"
 )
 
@@ -14,6 +15,16 @@ type RabbitConnection struct {
 
 func (rc *RabbitConnection) GetConnectionString() string {
 	return fmt.Sprintf("amqp://%s:%s@%s:%d", rc.User, rc.Password, rc.Host, rc.Port)
+}
+
+func (rc *RabbitConnection) Conn() (*amqp.Connection, error) {
+	connString := rc.GetConnectionString()
+	conn, err := amqp.Dial(connString)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create rabbit connection: %w", err)
+	}
+
+	return conn, err
 }
 
 type RabbitPublisherSettings struct {
