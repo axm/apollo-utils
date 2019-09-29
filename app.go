@@ -25,8 +25,8 @@ type RedisConfig struct {
 }
 
 type DefaultApp struct {
-	SqlServer *DatabaseConnection
-	Rabbit    *RabbitConnection
-	Redis     *RedisConfig
-	Router    *mux.Router
+	Database *DatabaseConnection
+	Rabbit   *RabbitConnection
+	Redis    *RedisConfig
+	Router   *mux.Router
 }
