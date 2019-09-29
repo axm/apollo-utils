@@ -12,6 +12,10 @@ type RabbitConnection struct {
 	Port     uint16
 }
 
+func (rc *RabbitConnection) GetConnectionString() string {
+	return fmt.Sprintf("amqp://%s:%s@%s:%d", rc.User, rc.Password, rc.Host, rc.Port)
+}
+
 type RabbitPublisherSettings struct {
 	Queue      string
 	Exchange   string
