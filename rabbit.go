@@ -2,7 +2,6 @@ package apollo
 
 import (
 	"fmt"
-
 	"github.com/streadway/amqp"
 )
 
@@ -50,6 +49,17 @@ type RabbitConsumerSettings struct {
 
 type RabbitPublisher interface {
 	PublishMessage(settings *RabbitPublisherSettings, contents *[]byte) error
+}
+
+type RabbitWrapper struct {
+	connection *amqp.Connection
+	channel    *amqp.Channel
+	Msgs       <-chan amqp.Delivery
+}
+
+func (rw *RabbitWrapper) Close() {
+	defer rw.channel.Close()
+	defer rw.connection.Close()
 }
 
 func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
@@ -100,4 +110,46 @@ func (rc *RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, co
 	}
 
 	return nil
+}
+
+func Consume(rc *RabbitConnection, cs *RabbitConsumerSettings) (*RabbitWrapper, error) {
+	conn, err := rc.CreateConnection()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create rabbit connection: %w", err)
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return nil, fmt.Errorf("unable to create rabbit channel: %w", err)
+	}
+
+	_, err = ch.QueueDeclare(
+		cs.Queue,
+		cs.AutoAck,
+		cs.Exclusive,
+		cs.NoLocal,
+		cs.NoWait,
+		nil)
+	if err != nil {
+		return nil, fmt.Errorf("unable to declare queue: %w", err)
+	}
+
+	msgs, err := ch.Consume(
+		cs.Queue,
+		cs.Consumer,
+		cs.AutoAck,
+		cs.Exclusive,
+		cs.NoLocal,
+		cs.NoWait,
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create consumer: %w", err)
+	}
+
+	return &RabbitWrapper{
+		connection: conn,
+		channel:    ch,
+		Msgs:       msgs,
+	}, nil
 }
