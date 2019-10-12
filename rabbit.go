@@ -47,10 +47,6 @@ type RabbitConsumerSettings struct {
 	Args      interface{}
 }
 
-type RabbitPublisher interface {
-	PublishMessage(settings *RabbitPublisherSettings, contents *[]byte) error
-}
-
 type RabbitWrapper struct {
 	connection *amqp.Connection
 	channel    *amqp.Channel
@@ -62,7 +58,7 @@ func (rw *RabbitWrapper) Close() {
 	defer rw.connection.Close()
 }
 
-func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
+func (rc RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/", rc.User, rc.Password, rc.Host, rc.Port))
 	if err != nil {
 		return nil, fmt.Errorf("error creating Rabbit connection: %w", err)
@@ -71,7 +67,11 @@ func (rc *RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	return conn, nil
 }
 
-func (rc *RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, contents *[]byte) error {
+type RabbitPublisher interface {
+	PublishMessage(settings RabbitPublisherSettings, contents *[]byte) error
+}
+
+func (rc RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, contents *[]byte) error {
 	connString := fmt.Sprintf("amqp://%s:%s@%s:%d/", rc.User, rc.Password, rc.Host, rc.Port)
 	conn, error := amqp.Dial(connString)
 	if error != nil {
@@ -112,7 +112,11 @@ func (rc *RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, co
 	return nil
 }
 
-func Consume(rc *RabbitConnection, cs *RabbitConsumerSettings) (*RabbitWrapper, error) {
+type RabbitConsumer interface {
+	Consume(cs RabbitConsumerSettings) (*RabbitWrapper, error)
+}
+
+func (rc RabbitConnection) Consume(cs RabbitConsumerSettings) (*RabbitWrapper, error) {
 	conn, err := rc.CreateConnection()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create rabbit connection: %w", err)
