@@ -2,9 +2,9 @@ package apollo
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
-	"fmt"
 	"path"
 )
 

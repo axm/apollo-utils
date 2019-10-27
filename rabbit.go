@@ -47,17 +47,6 @@ type RabbitConsumerSettings struct {
 	Args      interface{}
 }
 
-type RabbitWrapper struct {
-	connection *amqp.Connection
-	channel    *amqp.Channel
-	Msgs       <-chan amqp.Delivery
-}
-
-func (rw *RabbitWrapper) Close() {
-	defer rw.channel.Close()
-	defer rw.connection.Close()
-}
-
 func (rc RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/", rc.User, rc.Password, rc.Host, rc.Port))
 	if err != nil {
@@ -65,10 +54,6 @@ func (rc RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	}
 
 	return conn, nil
-}
-
-type RabbitPublisher interface {
-	PublishMessage(settings RabbitPublisherSettings, contents *[]byte) error
 }
 
 func (rc RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, contents *[]byte) error {
@@ -112,12 +97,18 @@ func (rc RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, con
 	return nil
 }
 
-type RabbitConsumer interface {
-	Consume(cs RabbitConsumerSettings) (*RabbitWrapper, error)
+type RabbitConsumerApp struct {
+	Rc  *RabbitConnection
+	Rcs *RabbitConsumerSettings
+	conn *amqp.Connection
 }
 
-func (rc RabbitConnection) Consume(cs RabbitConsumerSettings) (*RabbitWrapper, error) {
-	conn, err := rc.CreateConnection()
+func (app *RabbitConsumerApp) Close() {
+	app.conn.Close()
+}
+
+func (app *RabbitConsumerApp) Consume() (<-chan amqp.Delivery, error) {
+	conn, err := app.Rc.CreateConnection()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create rabbit connection: %w", err)
 	}
@@ -128,32 +119,28 @@ func (rc RabbitConnection) Consume(cs RabbitConsumerSettings) (*RabbitWrapper, e
 	}
 
 	_, err = ch.QueueDeclare(
-		cs.Queue,
-		cs.AutoAck,
-		cs.Exclusive,
-		cs.NoLocal,
-		cs.NoWait,
+		app.Rcs.Queue,
+		app.Rcs.AutoAck,
+		app.Rcs.Exclusive,
+		app.Rcs.NoLocal,
+		app.Rcs.NoWait,
 		nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to declare queue: %w", err)
 	}
 
 	msgs, err := ch.Consume(
-		cs.Queue,
-		cs.Consumer,
-		cs.AutoAck,
-		cs.Exclusive,
-		cs.NoLocal,
-		cs.NoWait,
+		app.Rcs.Queue,
+		app.Rcs.Consumer,
+		app.Rcs.AutoAck,
+		app.Rcs.Exclusive,
+		app.Rcs.NoLocal,
+		app.Rcs.NoWait,
 		nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create consumer: %w", err)
 	}
 
-	return &RabbitWrapper{
-		connection: conn,
-		channel:    ch,
-		Msgs:       msgs,
-	}, nil
+	return msgs, nil
 }
