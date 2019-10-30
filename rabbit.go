@@ -105,6 +105,10 @@ type RabbitConsumerApp struct {
 }
 
 func (app *RabbitConsumerApp) Close() {
+	if app.conn == nil {
+		return
+	}
+
 	app.conn.Close()
 }
 
