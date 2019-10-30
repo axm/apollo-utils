@@ -6,10 +6,10 @@ import (
 )
 
 type RabbitConnection struct {
-	User     string
-	Password string
-	Host     string
-	Port     uint16
+	User     string `json:"User"`
+	Password string `json:"Password"`
+	Host     string `json:"Host"`
+	Port     uint16 `json:"Port"`
 }
 
 func (rc *RabbitConnection) GetConnectionString() string {
@@ -27,24 +27,24 @@ func (rc *RabbitConnection) Conn() (*amqp.Connection, error) {
 }
 
 type RabbitPublisherSettings struct {
-	Queue      string
-	Exchange   string
-	RoutingKey string
-	Durable    bool
-	AutoDelete bool
-	Exclusive  bool
-	NoWait     bool
-	Args       amqp.Table
+	Queue      string     `json:"Queue"`
+	Exchange   string     `json:"Exchange"`
+	RoutingKey string     `json:"RoutingKey"`
+	Durable    bool       `json:"Durable"`
+	AutoDelete bool       `json:"AutoDelete"`
+	Exclusive  bool       `json:"Exclusive"`
+	NoWait     bool       `json:"NoWait"`
+	Args       amqp.Table `json:"Args"`
 }
 
 type RabbitConsumerSettings struct {
-	Queue     string
-	Consumer  string
-	AutoAck   bool
-	Exclusive bool
-	NoLocal   bool
-	NoWait    bool
-	Args      interface{}
+	Queue     string      `json:"Queue"`
+	Consumer  string      `json:"Consumer"`
+	AutoAck   bool        `json:"AutoAck"`
+	Exclusive bool        `json:"Exclusive"`
+	NoLocal   bool        `json:"NoLocal"`
+	NoWait    bool        `json:"NoWait"`
+	Args      interface{} `json:"Args"`
 }
 
 func (rc RabbitConnection) CreateConnection() (*amqp.Connection, error) {
@@ -98,9 +98,10 @@ func (rc RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, con
 }
 
 type RabbitConsumerApp struct {
-	Rc  *RabbitConnection
-	Rcs *RabbitConsumerSettings
-	conn *amqp.Connection
+	RabbitConnection *RabbitConnection       `json:"RabbitConnection"`
+	RabbitConsumer   *RabbitConsumerSettings `json:"RabbitConsumer"`
+	Database         *DatabaseConnection     `json:"Database"`
+	conn             *amqp.Connection
 }
 
 func (app *RabbitConsumerApp) Close() {
@@ -108,7 +109,7 @@ func (app *RabbitConsumerApp) Close() {
 }
 
 func (app *RabbitConsumerApp) Consume() (<-chan amqp.Delivery, error) {
-	conn, err := app.Rc.CreateConnection()
+	conn, err := app.RabbitConnection.CreateConnection()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create rabbit connection: %w", err)
 	}
@@ -119,23 +120,23 @@ func (app *RabbitConsumerApp) Consume() (<-chan amqp.Delivery, error) {
 	}
 
 	_, err = ch.QueueDeclare(
-		app.Rcs.Queue,
-		app.Rcs.AutoAck,
-		app.Rcs.Exclusive,
-		app.Rcs.NoLocal,
-		app.Rcs.NoWait,
+		app.RabbitConsumer.Queue,
+		app.RabbitConsumer.AutoAck,
+		app.RabbitConsumer.Exclusive,
+		app.RabbitConsumer.NoLocal,
+		app.RabbitConsumer.NoWait,
 		nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to declare queue: %w", err)
 	}
 
 	msgs, err := ch.Consume(
-		app.Rcs.Queue,
-		app.Rcs.Consumer,
-		app.Rcs.AutoAck,
-		app.Rcs.Exclusive,
-		app.Rcs.NoLocal,
-		app.Rcs.NoWait,
+		app.RabbitConsumer.Queue,
+		app.RabbitConsumer.Consumer,
+		app.RabbitConsumer.AutoAck,
+		app.RabbitConsumer.Exclusive,
+		app.RabbitConsumer.NoLocal,
+		app.RabbitConsumer.NoWait,
 		nil,
 	)
 	if err != nil {
