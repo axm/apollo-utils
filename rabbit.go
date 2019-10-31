@@ -48,7 +48,9 @@ type RabbitConsumerSettings struct {
 }
 
 func (rc RabbitConnection) CreateConnection() (*amqp.Connection, error) {
-	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s:%s/", rc.User, rc.Password, rc.Host, rc.Port))
+	connString := rc.GetConnectionString()
+	fmt.Printf("rabbit conn string: %s\n", connString)
+	conn, err := amqp.Dial(connString)
 	if err != nil {
 		return nil, fmt.Errorf("error creating Rabbit connection: %w", err)
 	}
