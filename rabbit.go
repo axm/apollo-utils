@@ -26,6 +26,36 @@ func (rc *RabbitConnection) Conn() (*amqp.Connection, error) {
 	return conn, err
 }
 
+func NewRabbitError(isTransient bool, msg string, orig error) *RabbitError {
+	return &RabbitError{
+		IsTransient: isTransient,
+		Msg:         msg,
+		SourceError: orig,
+	}
+}
+
+type RabbitError struct {
+	IsTransient bool
+	Msg string
+	SourceError error
+}
+
+func (err *RabbitError) Error() string {
+	if err.IsTransient {
+		return fmt.Sprintf("Transient error ocurred: %s", err.Msg)
+	}
+
+	return fmt.Sprintf("Permanent error ocurred: %s", err.Msg)
+}
+
+type RabbitPublisher struct {
+	rps *RabbitPublisherSettings
+	rc *RabbitConnection
+	conn *amqp.Connection
+	ch *amqp.Channel
+	err *RabbitError
+}
+
 type RabbitPublisherSettings struct {
 	Queue      string     `json:"Queue"`
 	Exchange   string     `json:"Exchange"`
@@ -47,6 +77,16 @@ type RabbitConsumerSettings struct {
 	Args      interface{} `json:"Args"`
 }
 
+func (rp *RabbitPublisher) Close() {
+	if rp.ch != nil {
+		rp.ch.Close()
+	}
+
+	if rp.conn != nil {
+		rp.conn.Close()
+	}
+}
+
 func (rc RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	connString := rc.GetConnectionString()
 	fmt.Printf("rabbit conn string: %s\n", connString)
@@ -58,45 +98,69 @@ func (rc RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	return conn, nil
 }
 
-func (rc RabbitConnection) PublishMessage(settings *RabbitPublisherSettings, contents *[]byte) error {
-	connString := fmt.Sprintf("amqp://%s:%s@%s:%d/", rc.User, rc.Password, rc.Host, rc.Port)
-	conn, error := amqp.Dial(connString)
-	if error != nil {
-		return fmt.Errorf("unable to connect to rabbit instance: %w", error)
-	}
-	defer conn.Close()
+func (rp *RabbitPublisher) Publish(contents *[]byte) error {
+	if rp.err != nil && !rp.err.IsTransient {
+		if !rp.err.IsTransient {
+			return fmt.Errorf("publisher permanently closed: %w", rp.err)
+		}
 
-	ch, error := conn.Channel()
-	if error != nil {
-		return fmt.Errorf("unable to create rabbit channel: %w", error)
-	}
-	defer ch.Close()
-
-	_, error = ch.QueueDeclare(
-		settings.Queue,      // name
-		settings.Durable,    // durable
-		settings.AutoDelete, // delete when usused
-		settings.Exclusive,  // exclusive
-		settings.NoWait,     // no-wait
-		settings.Args,       // arguments
-	)
-	if error != nil {
-		return fmt.Errorf("error declaring queue: %w", error)
+		rp.err = nil
 	}
 
-	error = ch.Publish(settings.Exchange,
-		settings.RoutingKey,
+	if rp.conn == nil {
+		conn, ch, rabbitErr := createConnection(rp.rc, rp.rps)
+		if rabbitErr != nil {
+			rp.err = rabbitErr
+			return fmt.Errorf("unable to create connection: %w", rabbitErr)
+		}
+		rp.conn = conn
+		rp.ch = ch
+	}
+
+	err := rp.ch.Publish(rp.rps.Exchange,
+		rp.rps.RoutingKey,
 		false,
 		false,
 		amqp.Publishing{
 			ContentType: "application/json",
 			Body:        *contents,
 		})
-	if error != nil {
-		return fmt.Errorf("error publishing message: %w", error)
+
+	if err != nil {
+		return fmt.Errorf("unable to publish message: %w", err)
 	}
 
 	return nil
+}
+
+func createConnection(rc *RabbitConnection, rps *RabbitPublisherSettings) (*amqp.Connection, *amqp.Channel, *RabbitError) {
+	conn, err := amqp.Dial(rc.GetConnectionString())
+	if err != nil {
+		return nil, nil, NewRabbitError(true, "unable to create rabbit connection", err)
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+
+	}
+
+	_, err = ch.QueueDeclare(
+		rps.Queue,      // name
+		rps.Durable,    // durable
+		rps.AutoDelete, // delete when usused
+		rps.Exclusive,  // exclusive
+		rps.NoWait,     // no-wait
+		rps.Args,       // arguments
+	)
+	if err != nil {
+		return nil, nil, &RabbitError{
+			IsTransient: false,
+			Msg:         "error declaring queue",
+			SourceError: err,
+		}
+	}
+
+	return conn, ch, nil
 }
 
 type RabbitConsumerApp struct {
