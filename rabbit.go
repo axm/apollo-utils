@@ -56,6 +56,13 @@ type RabbitPublisher struct {
 	err                     *RabbitError
 }
 
+func NewRabbitPublisher(rc *RabbitConnection, rps *RabbitPublisherSettings) *RabbitPublisher {
+	return &RabbitPublisher{
+		RabbitPublisherSettings: rps,
+		RabbitConnection:        rc,
+	}
+}
+
 type RabbitPublisherSettings struct {
 	Queue      string     `json:"Queue"`
 	Exchange   string     `json:"Exchange"`
