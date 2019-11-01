@@ -36,7 +36,7 @@ func NewRabbitError(isTransient bool, msg string, orig error) *RabbitError {
 
 type RabbitError struct {
 	IsTransient bool
-	Msg string
+	Msg         string
 	SourceError error
 }
 
@@ -49,11 +49,11 @@ func (err *RabbitError) Error() string {
 }
 
 type RabbitPublisher struct {
-	rps *RabbitPublisherSettings
-	rc *RabbitConnection
-	conn *amqp.Connection
-	ch *amqp.Channel
-	err *RabbitError
+	RabbitPublisherSettings *RabbitPublisherSettings `json:"RabbitPublisherSettings"`
+	RabbitConnection        *RabbitConnection        `json:"RabbitConnection"`
+	conn                    *amqp.Connection
+	ch                      *amqp.Channel
+	err                     *RabbitError
 }
 
 type RabbitPublisherSettings struct {
@@ -108,7 +108,7 @@ func (rp *RabbitPublisher) Publish(contents *[]byte) error {
 	}
 
 	if rp.conn == nil {
-		conn, ch, rabbitErr := createConnection(rp.rc, rp.rps)
+		conn, ch, rabbitErr := createConnection(rp.RabbitConnection, rp.RabbitPublisherSettings)
 		if rabbitErr != nil {
 			rp.err = rabbitErr
 			return fmt.Errorf("unable to create connection: %w", rabbitErr)
@@ -117,8 +117,8 @@ func (rp *RabbitPublisher) Publish(contents *[]byte) error {
 		rp.ch = ch
 	}
 
-	err := rp.ch.Publish(rp.rps.Exchange,
-		rp.rps.RoutingKey,
+	err := rp.ch.Publish(rp.RabbitPublisherSettings.Exchange,
+		rp.RabbitPublisherSettings.RoutingKey,
 		false,
 		false,
 		amqp.Publishing{
