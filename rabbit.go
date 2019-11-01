@@ -23,6 +23,7 @@ func (rc *RabbitConnection) GetConnectionString() string {
 
 func (rc *RabbitConnection) Conn() (*amqp.Connection, error) {
 	connString := rc.GetConnectionString()
+	fmt.Println(connString)
 	conn, err := amqp.Dial(connString)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create rabbit connection: %w", err)
