@@ -10,10 +10,15 @@ type RabbitConnection struct {
 	Password string `json:"Password"`
 	Host     string `json:"Host"`
 	Port     uint16 `json:"Port"`
+	Vhost    string `json:"Vhost"`
 }
 
 func (rc *RabbitConnection) GetConnectionString() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%d", rc.User, rc.Password, rc.Host, rc.Port)
+	vhost := ""
+	if rc.Vhost != "" {
+		vhost = rc.Vhost
+	}
+	return fmt.Sprintf("amqp://%s:%s@%s:%d/%s", rc.User, rc.Password, rc.Host, rc.Port, vhost)
 }
 
 func (rc *RabbitConnection) Conn() (*amqp.Connection, error) {
