@@ -54,7 +54,7 @@ func (err *RabbitError) Error() string {
 	return fmt.Sprintf("Permanent error ocurred: %s", err.Msg)
 }
 
-type RabbitPublisher struct {
+type RabbitPublisherApp struct {
 	RabbitPublisherSettings *RabbitPublisherSettings `json:"RabbitPublisherSettings"`
 	RabbitConnection        *RabbitConnection        `json:"RabbitConnection"`
 	conn                    *amqp.Connection
@@ -62,8 +62,8 @@ type RabbitPublisher struct {
 	err                     *RabbitError
 }
 
-func NewRabbitPublisher(rc *RabbitConnection, rps *RabbitPublisherSettings) *RabbitPublisher {
-	return &RabbitPublisher{
+func NewRabbitPublisherApp(rc *RabbitConnection, rps *RabbitPublisherSettings) *RabbitPublisherApp {
+	return &RabbitPublisherApp{
 		RabbitPublisherSettings: rps,
 		RabbitConnection:        rc,
 	}
@@ -90,7 +90,7 @@ type RabbitConsumerSettings struct {
 	Args      interface{} `json:"Args"`
 }
 
-func (rp *RabbitPublisher) Close() {
+func (rp *RabbitPublisherApp) Close() {
 	if rp.ch != nil {
 		rp.ch.Close()
 	}
@@ -111,7 +111,7 @@ func (rc RabbitConnection) CreateConnection() (*amqp.Connection, error) {
 	return conn, nil
 }
 
-func (rp *RabbitPublisher) Publish(contents *[]byte) error {
+func (rp *RabbitPublisherApp) Publish(contents *[]byte) error {
 	if rp.err != nil && !rp.err.IsTransient {
 		if !rp.err.IsTransient {
 			return fmt.Errorf("publisher permanently closed: %w", rp.err)
